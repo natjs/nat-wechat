@@ -18,10 +18,10 @@ typedef void (^NatCallback)(id error, id result);
 
 + (NatWechat *)singletonManger;
 
-- (void)init:(NSString *)appId :(NatCallback)callBack;
-- (void)checkInstalled:(NatCallback)callBack;
-- (void)share:(NSDictionary *)options :(NatCallback)callBack;
-- (void)pay:(NSDictionary *)options :(NatCallback)callBack;
-- (void)auth:(NSDictionary *)options :(NatCallback)callBack;
+- (void)init:(NSString *)appId :(NatCallback)callback;
+- (void)checkInstalled:(NatCallback)callback;
+- (void)share:(NSDictionary *)options :(NatCallback)callback;
+- (void)pay:(NSDictionary *)options :(NatCallback)callback;
+- (void)auth:(NSDictionary *)options :(NatCallback)callback;
 
 @end

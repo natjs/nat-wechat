@@ -34,9 +34,9 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     callback(nil, nil);
 }
 
-- (void)checkInstalled:(NatCallback)callBack {
+- (void)checkInstalled:(NatCallback)callback {
     BOOL isInstalled = [WXApi isWXAppInstalled];
-    callBack(nil, isInstalled);
+    callback(nil, [NSNumber numberWithBool:isInstalled]);
 }
 
 - (void)share:(NSDictionary *)options :(NatCallback)callback {
