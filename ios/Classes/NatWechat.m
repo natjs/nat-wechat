@@ -24,22 +24,18 @@ static int const MAX_THUMBNAIL_SIZE = 320;
 }
 
 - (void)initWXAPI:(NSString *)appId {
-    self.wechatAppId = appId;
+    self.appId = appId;
     [WXApi registerApp: appId];
 }
 
 - (void)init:(NSString *)appId :(NatCallback)callback {
     [self initWXAPI: appId];
 
-    callback(nil)
-}
-
-- (void)isInstalled {
-    return [WXApi isWXAppInstalled];
+    callback(nil);
 }
 
 - (void)checkInstalled:(NatCallback)callBack {
-    callBack(nil, [self isInstalled]);
+    callBack(nil, [WXApi isWXAppInstalled]);
 }
 
 - (void)share:(NSDictionary *)options :(NatCallback)callBack {
@@ -64,13 +60,10 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     if (message) {
         req.bText = NO;
         
-        // async
-        [self.commandDelegate runInBackground:^{
-            req.message = [self buildSharingMessage:message];
-            if (![WXApi sendReq:req]) {
-                callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
-            }
-        }];
+        req.message = [self buildSharingMessage:message];
+        if (![WXApi sendReq:req]) {
+            callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
+        }
     } else {
         req.bText = YES;
         req.text = [options objectForKey:@"text"];
@@ -127,9 +120,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
         req.state = [options objectForKey:@"state"];
     }
     
-    UIViewController *vc = [self getCurrentVC];
-    
-    if ([WXApi sendAuthReq:req viewController:vc delegate:self]) {
+    if ([WXApi sendAuthReq:req]) {
     } else {
         callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
     }

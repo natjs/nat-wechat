@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
 
   # ―――  Spec Metadata  ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
   s.name         = "NatWechat"
-  s.version      = "0.0.1-beta"
+  s.version      = "0.0.1-beta.2"
   s.summary      = "Nat.js Module: Wechat."
   s.homepage     = "http://natjs.com"
   s.license      = "MIT"

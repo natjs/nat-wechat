@@ -12,6 +12,8 @@
 
 @interface NatWechat : NSObject
 
+@property (nonatomic, strong) NSString *appId;
+
 typedef void (^NatCallback)(id error, id result);
 
 + (NatWechat *)singletonManger;
