@@ -35,11 +35,11 @@ static int const MAX_THUMBNAIL_SIZE = 320;
 }
 
 - (void)checkInstalled:(NatCallback)callBack {
-    BOOL *isInstalled = [WXApi isWXAppInstalled];
-    callBack(nil, isInstalled]);
+    bool *isInstalled = [WXApi isWXAppInstalled];
+    callBack(nil, isInstalled);
 }
 
-- (void)share:(NSDictionary *)options :(NatCallback)callBack {
+- (void)share:(NSDictionary *)options :(NatCallback)callback {
     // if not installed
     if (![WXApi isWXAppInstalled]) {
         callback(@{@"error":@{@"msg":@"微信未安装", @"code":@"301201"}}, nil);
@@ -121,7 +121,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
         req.state = [options objectForKey:@"state"];
     }
     
-    if ([WXApi sendAuthReq:req]) {
+    if ([WXApi sendReq:req]) {
     } else {
         callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
     }
