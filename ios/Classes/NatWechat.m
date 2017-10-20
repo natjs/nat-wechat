@@ -31,11 +31,12 @@ static int const MAX_THUMBNAIL_SIZE = 320;
 - (void)init:(NSString *)appId :(NatCallback)callback {
     [self initWXAPI: appId];
 
-    callback(nil);
+    callback(nil, nil);
 }
 
 - (void)checkInstalled:(NatCallback)callBack {
-    callBack(nil, [WXApi isWXAppInstalled]);
+    BOOL *isInstalled = [WXApi isWXAppInstalled];
+    callBack(nil, isInstalled]);
 }
 
 - (void)share:(NSDictionary *)options :(NatCallback)callBack {
@@ -146,43 +147,47 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     NSDictionary *media = [message objectForKey:@"media"];
     
     // check types
-    NSString type = [media objectForKey:@"type"];
-    switch (type)
+    NSString *type = [media objectForKey:@"type"];
+
+    NSArray *types = @[@"app", @"emotion", @"file", @"image", @"music", @"video", @"webpage"];
+    int typeIndex = [types indexOfObject:theString];
+
+    switch (typeIndex)
     {
-        case @"app":
+        case 0:
             mediaObject = [WXAppExtendObject object];
             ((WXAppExtendObject*)mediaObject).extInfo = [media objectForKey:@"extInfo"];
             ((WXAppExtendObject*)mediaObject).url = [media objectForKey:@"url"];
             break;
             
-        case @"emotion":
+        case 1:
             mediaObject = [WXEmoticonObject object];
             ((WXEmoticonObject*)mediaObject).emoticonData = [self getNSDataFromURL:[media objectForKey:@"emotion"]];
             break;
             
-        case @"file":
+        case 2:
             mediaObject = [WXFileObject object];
             ((WXFileObject*)mediaObject).fileData = [self getNSDataFromURL:[media objectForKey:@"file"]];
             ((WXFileObject*)mediaObject).fileExtension = [media objectForKey:@"fileExtension"];
             break;
             
-        case @"image":
+        case 3:
             mediaObject = [WXImageObject object];
             ((WXImageObject*)mediaObject).imageData = [self getNSDataFromURL:[media objectForKey:@"image"]];
             break;
             
-        case @"music":
+        case 4:
             mediaObject = [WXMusicObject object];
             ((WXMusicObject*)mediaObject).musicUrl = [media objectForKey:@"musicUrl"];
             ((WXMusicObject*)mediaObject).musicDataUrl = [media objectForKey:@"musicDataUrl"];
             break;
             
-        case @"video":
+        case 5:
             mediaObject = [WXVideoObject object];
             ((WXVideoObject*)mediaObject).videoUrl = [media objectForKey:@"videoUrl"];
             break;
             
-        case @"webpage":
+        case 6:
         default:
             mediaObject = [WXWebpageObject object];
             ((WXWebpageObject *)mediaObject).webpageUrl = [media objectForKey:@"webpageUrl"];
