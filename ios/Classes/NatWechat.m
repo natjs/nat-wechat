@@ -35,7 +35,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
 }
 
 - (void)checkInstalled:(NatCallback)callBack {
-    bool *isInstalled = [WXApi isWXAppInstalled];
+    BOOL isInstalled = [WXApi isWXAppInstalled];
     callBack(nil, isInstalled);
 }
 
@@ -148,9 +148,8 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     
     // check types
     NSString *type = [media objectForKey:@"type"];
-
     NSArray *types = @[@"app", @"emotion", @"file", @"image", @"music", @"video", @"webpage"];
-    int typeIndex = [types indexOfObject:theString];
+    int typeIndex = [types indexOfObject:type];
 
     switch (typeIndex)
     {
