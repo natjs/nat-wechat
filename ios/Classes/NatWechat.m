@@ -45,7 +45,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
 - (void)share:(NSDictionary *)options :(NatCallback)callBack {
     // if not installed
     if (![WXApi isWXAppInstalled]) {
-        callback(@{@"error":@{@"msg":"微信未安装", @"code":"301201"}}, nil);
+        callback(@{@"error":@{@"msg":@"微信未安装", @"code":@"301201"}}, nil);
         return;
     }
 
@@ -68,7 +68,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
         [self.commandDelegate runInBackground:^{
             req.message = [self buildSharingMessage:message];
             if (![WXApi sendReq:req]) {
-                callback(@{@"error":@{@"msg":"发送请求失败", @"code":"301401"}}, nil);
+                callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
             }
         }];
     } else {
@@ -76,7 +76,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
         req.text = [options objectForKey:@"text"];
         
         if (![WXApi sendReq:req]) {
-            callback(@{@"error":@{@"msg":"发送请求失败", @"code":"301401"}}, nil);
+            callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
         }
     }
 }
@@ -94,7 +94,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     
     for (NSString *key in requiredParams) {
         if (![options objectForKey:key]) {
-            callback(@{@"error":@{@"msg":"参数格式错误", @"code":"301501"}}, nil);
+            callback(@{@"error":@{@"msg":@"参数格式错误", @"code":@"301501"}}, nil);
             return;
         }
     }
@@ -109,7 +109,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     
     if ([WXApi sendReq:req]) {
     } else {
-        callback(@{@"error":@{@"msg":"发送请求失败", @"code":"301401"}}, nil);
+        callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
     }
 }
 
@@ -131,7 +131,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     
     if ([WXApi sendAuthReq:req viewController:vc delegate:self]) {
     } else {
-        callback(@{@"error":@{@"msg":"发送请求失败", @"code":"301401"}}, nil);
+        callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
     }
 }
 
@@ -155,43 +155,43 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     NSDictionary *media = [message objectForKey:@"media"];
     
     // check types
-    NSInteger type = [[media objectForKey:@"type"] integerValue];
+    NSString type = [media objectForKey:@"type"];
     switch (type)
     {
-        case CDVWXSharingTypeApp:
+        case @"app":
             mediaObject = [WXAppExtendObject object];
             ((WXAppExtendObject*)mediaObject).extInfo = [media objectForKey:@"extInfo"];
             ((WXAppExtendObject*)mediaObject).url = [media objectForKey:@"url"];
             break;
             
-        case CDVWXSharingTypeEmotion:
+        case @"emotion":
             mediaObject = [WXEmoticonObject object];
             ((WXEmoticonObject*)mediaObject).emoticonData = [self getNSDataFromURL:[media objectForKey:@"emotion"]];
             break;
             
-        case CDVWXSharingTypeFile:
+        case @"file":
             mediaObject = [WXFileObject object];
             ((WXFileObject*)mediaObject).fileData = [self getNSDataFromURL:[media objectForKey:@"file"]];
             ((WXFileObject*)mediaObject).fileExtension = [media objectForKey:@"fileExtension"];
             break;
             
-        case CDVWXSharingTypeImage:
+        case @"image":
             mediaObject = [WXImageObject object];
             ((WXImageObject*)mediaObject).imageData = [self getNSDataFromURL:[media objectForKey:@"image"]];
             break;
             
-        case CDVWXSharingTypeMusic:
+        case @"music":
             mediaObject = [WXMusicObject object];
             ((WXMusicObject*)mediaObject).musicUrl = [media objectForKey:@"musicUrl"];
             ((WXMusicObject*)mediaObject).musicDataUrl = [media objectForKey:@"musicDataUrl"];
             break;
             
-        case CDVWXSharingTypeVideo:
+        case @"video":
             mediaObject = [WXVideoObject object];
             ((WXVideoObject*)mediaObject).videoUrl = [media objectForKey:@"videoUrl"];
             break;
             
-        case CDVWXSharingTypeWebPage:
+        case @"webpage":
         default:
             mediaObject = [WXWebpageObject object];
             ((WXWebpageObject *)mediaObject).webpageUrl = [media objectForKey:@"webpageUrl"];
