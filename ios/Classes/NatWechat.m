@@ -23,14 +23,12 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     return manager;
 }
 
-- (void)initWXAPI:(NSString *)appId {
-    self.appId = appId;
++ (void)initWXAPI:(NSString *)appId {
     [WXApi registerApp: appId];
 }
 
 - (void)init:(NSString *)appId :(NatCallback)callback {
-    [self initWXAPI: appId];
-
+    [NatWechat initWXAPI: appId];
     callback(nil, nil);
 }
 
@@ -40,7 +38,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
 }
 
 - (void)share:(NSDictionary *)options :(NatCallback)callback {
-    // if not installed
+    // check installed
     if (![WXApi isWXAppInstalled]) {
         callback(@{@"error":@{@"msg":@"微信未安装", @"code":@"301201"}}, nil);
         return;
@@ -52,26 +50,53 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     if ([options objectForKey:@"scene"]) {
         req.scene = (int)[[options objectForKey:@"scene"] integerValue];
     } else {
-        req.scene = WXSceneTimeline;
+        req.scene = WXSceneSession;
     }
     
     // message or text
-    NSDictionary *message = [options objectForKey:@"message"];
+    NSDictionary *content = [options objectForKey:@"content"];
     
-    if (message) {
+    if (content) {
         req.bText = NO;
         
-        req.message = [self buildSharingMessage:message];
-        if (![WXApi sendReq:req]) {
-            callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
-        }
+        // TODO: async
+        req.message = [self buildSharingMessage:content];
     } else {
         req.bText = YES;
         req.text = [options objectForKey:@"text"];
-        
-        if (![WXApi sendReq:req]) {
-            callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
-        }
+    }
+    
+    if ([WXApi sendReq:req]) {
+        __block id observer = [[NSNotificationCenter defaultCenter] addObserverForName:WXResTypeShare object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * notification) {
+            [self handleProcessResponse:notification :callback];
+            [[NSNotificationCenter defaultCenter] removeObserver:observer];
+        }];
+    } else {
+        callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
+    }
+}
+
+- (void)auth:(NSDictionary *)options :(NatCallback)callback {
+
+    SendAuthReq* req =[[SendAuthReq alloc] init];
+
+    if ([options objectForKey:@"scene"]) {
+        req.scope = [options objectForKey:@"scene"];
+    } else {
+        req.scope = @"snsapi_userinfo";
+    }
+
+    if ([options objectForKey:@"state"]) {
+        req.state = [options objectForKey:@"state"];
+    }
+    
+    if ([WXApi sendReq:req]) {
+        __block id observer = [[NSNotificationCenter defaultCenter] addObserverForName:WXResTypeAuth object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * notification) {
+            [self handleProcessResponse:notification :callback];
+            [[NSNotificationCenter defaultCenter] removeObserver:observer];
+        }];
+    } else {
+        callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
     }
 }
 
@@ -79,7 +104,7 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     
     // check required parameters
     NSArray *requiredParams;
-
+    
     if ([options objectForKey:@"mch_id"]) {
         requiredParams = @[@"mch_id", @"prepay_id", @"timestamp", @"nonce", @"sign"];
     } else {
@@ -102,26 +127,10 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     req.sign = [options objectForKey:requiredParams[4]];
     
     if ([WXApi sendReq:req]) {
-    } else {
-        callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
-    }
-}
-
-- (void)auth:(NSDictionary *)options :(NatCallback)callback {
-
-    SendAuthReq* req =[[SendAuthReq alloc] init];
-
-    if ([options objectForKey:@"scene"]) {
-        req.scope = [options objectForKey:@"scene"];
-    } else {
-        req.scope = @"snsapi_userinfo";
-    }
-
-    if ([options objectForKey:@"state"]) {
-        req.state = [options objectForKey:@"state"];
-    }
-    
-    if ([WXApi sendReq:req]) {
+        __block id observer = [[NSNotificationCenter defaultCenter] addObserverForName:WXResTypePay object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * notification) {
+            [self handleProcessResponse:notification :callback];
+            [[NSNotificationCenter defaultCenter] removeObserver:observer];
+        }];
     } else {
         callback(@{@"error":@{@"msg":@"发送请求失败", @"code":@"301401"}}, nil);
     }
@@ -129,67 +138,77 @@ static int const MAX_THUMBNAIL_SIZE = 320;
 
 #pragma mark "Private methods"
 
-- (WXMediaMessage *)buildSharingMessage:(NSDictionary *)message
+- (void)handleProcessResponse:(NSNotification *)notification :(NatCallback)callback
+{
+    NSDictionary *result = notification.userInfo;
+    int status = (int)[[result objectForKey:@"status"] integerValue];
+    
+    if (status == 0) {
+        callback(nil, result);
+    } else {
+        NSDictionary *error = [result objectForKey:@"error"];
+        callback(@{@"error":error}, nil);
+    }
+}
+
+- (WXMediaMessage *)buildSharingMessage:(NSDictionary *)content
 {
     WXMediaMessage *wxMediaMessage = [WXMediaMessage message];
-    wxMediaMessage.title = [message objectForKey:@"title"];
-    wxMediaMessage.description = [message objectForKey:@"description"];
-    wxMediaMessage.mediaTagName = [message objectForKey:@"mediaTagName"];
-    wxMediaMessage.messageExt = [message objectForKey:@"messageExt"];
-    wxMediaMessage.messageAction = [message objectForKey:@"messageAction"];
-    if ([message objectForKey:@"thumb"])
+    wxMediaMessage.title = [content objectForKey:@"title"];
+    wxMediaMessage.description = [content objectForKey:@"description"];
+    wxMediaMessage.mediaTagName = [content objectForKey:@"mediaTagName"];
+    wxMediaMessage.messageExt = [content objectForKey:@"messageExt"];
+    wxMediaMessage.messageAction = [content objectForKey:@"messageAction"];
+    if ([content objectForKey:@"thumbUrl"])
     {
-        [wxMediaMessage setThumbImage:[self getUIImageFromURL:[message objectForKey:@"thumb"]]];
+        [wxMediaMessage setThumbImage:[self getUIImageFromURL:[content objectForKey:@"thumbUrl"]]];
     }
     
     // media parameters
     id mediaObject = nil;
-    NSDictionary *media = [message objectForKey:@"media"];
     
     // check types
-    NSString *type = [media objectForKey:@"type"];
-    NSArray *types = @[@"app", @"emotion", @"file", @"image", @"music", @"video", @"webpage"];
-    int typeIndex = [types indexOfObject:type];
+    NSInteger type = [[content objectForKey:@"type"] integerValue];
 
-    switch (typeIndex)
+    switch (type)
     {
-        case 0:
-            mediaObject = [WXAppExtendObject object];
-            ((WXAppExtendObject*)mediaObject).extInfo = [media objectForKey:@"extInfo"];
-            ((WXAppExtendObject*)mediaObject).url = [media objectForKey:@"url"];
-            break;
-            
         case 1:
-            mediaObject = [WXEmoticonObject object];
-            ((WXEmoticonObject*)mediaObject).emoticonData = [self getNSDataFromURL:[media objectForKey:@"emotion"]];
+            mediaObject = [WXAppExtendObject object];
+            ((WXAppExtendObject*)mediaObject).extInfo = [content objectForKey:@"extInfo"];
+            ((WXAppExtendObject*)mediaObject).url = [content objectForKey:@"filePath"];
             break;
             
         case 2:
-            mediaObject = [WXFileObject object];
-            ((WXFileObject*)mediaObject).fileData = [self getNSDataFromURL:[media objectForKey:@"file"]];
-            ((WXFileObject*)mediaObject).fileExtension = [media objectForKey:@"fileExtension"];
+            mediaObject = [WXEmoticonObject object];
+            ((WXEmoticonObject*)mediaObject).emoticonData = [self getNSDataFromURL:[content objectForKey:@"dataUrl"]];
             break;
             
         case 3:
-            mediaObject = [WXImageObject object];
-            ((WXImageObject*)mediaObject).imageData = [self getNSDataFromURL:[media objectForKey:@"image"]];
+            mediaObject = [WXFileObject object];
+            ((WXFileObject*)mediaObject).fileData = [self getNSDataFromURL:[content objectForKey:@"filePath"]];
+            ((WXFileObject*)mediaObject).fileExtension = [content objectForKey:@"fileExtension"];
             break;
             
         case 4:
-            mediaObject = [WXMusicObject object];
-            ((WXMusicObject*)mediaObject).musicUrl = [media objectForKey:@"musicUrl"];
-            ((WXMusicObject*)mediaObject).musicDataUrl = [media objectForKey:@"musicDataUrl"];
+            mediaObject = [WXImageObject object];
+            ((WXImageObject*)mediaObject).imageData = [self getNSDataFromURL:[content objectForKey:@"dataUrl"]];
             break;
             
         case 5:
-            mediaObject = [WXVideoObject object];
-            ((WXVideoObject*)mediaObject).videoUrl = [media objectForKey:@"videoUrl"];
+            mediaObject = [WXMusicObject object];
+            ((WXMusicObject*)mediaObject).musicUrl = [content objectForKey:@"link"];
+            ((WXMusicObject*)mediaObject).musicDataUrl = [content objectForKey:@"dataUrl"];
             break;
             
         case 6:
+            mediaObject = [WXVideoObject object];
+            ((WXVideoObject*)mediaObject).videoUrl = [content objectForKey:@"dataUrl"];
+            break;
+            
+        case 7:
         default:
             mediaObject = [WXWebpageObject object];
-            ((WXWebpageObject *)mediaObject).webpageUrl = [media objectForKey:@"webpageUrl"];
+            ((WXWebpageObject *)mediaObject).webpageUrl = [content objectForKey:@"link"];
     }
     
     wxMediaMessage.mediaObject = mediaObject;
@@ -288,6 +307,108 @@ static int const MAX_THUMBNAIL_SIZE = 320;
     return result;
 }
 
+-(void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
 
+#pragma mark "WXApiDelegate"
+
+/**
+ * Not implemented
+ */
+- (void)onReq:(BaseReq *)req
+{
+    NSLog(@"%@", req);
+}
+
+- (void)onResp:(BaseResp *)resp
+{
+    BOOL success = NO;
+    NSString *message = @"Unknown";
+    NSDictionary *result = nil;
+    NSNotification * notification = nil;
+    
+    switch (resp.errCode) {
+        case WXSuccess:
+            success = YES;
+            break;
+            
+        case WXErrCodeCommon:
+            message = @"普通错误";
+            break;
+            
+        case WXErrCodeUserCancel:
+            message = @"用户取消";
+            break;
+            
+        case WXErrCodeSentFail:
+            message = @"发送失败";
+            break;
+            
+        case WXErrCodeAuthDeny:
+            message = @"授权失败";
+            break;
+            
+        case WXErrCodeUnsupport:
+            message = @"微信不支持";
+            break;
+            
+        default:
+            message = @"未知错误";
+    }
+    
+    if (!success) {
+        result = @{
+                   @"status": @(resp.errCode),
+                   @"error": @{
+                           @"msg": resp.errStr != nil ? resp.errStr : message,
+                           @"code": @(resp.errCode)
+                           }
+                   };
+    }
+    
+    // share
+    if ([resp isKindOfClass:[SendMessageToWXResp class]]) {
+        if (success) {
+            result = @{@"status": @0};
+        }
+        
+        notification = [NSNotification notificationWithName:WXResTypeShare object:nil userInfo:result];
+    }
+    // auth
+    else if ([resp isKindOfClass:[SendAuthResp class]]) {
+        if (success) {
+            SendAuthResp* authResp = (SendAuthResp*)resp;
+            result = @{
+                       @"status": @0,
+                       @"code": authResp.code != nil ? authResp.code : @"",
+                       @"state": authResp.state != nil ? authResp.state : @"",
+                       @"lang": authResp.lang != nil ? authResp.lang : @"",
+                       @"country": authResp.country != nil ? authResp.country : @""
+                       };
+        }
+        
+        notification = [NSNotification notificationWithName:WXResTypeAuth object:nil userInfo:result];
+    }
+    // pay
+    else if([resp isKindOfClass:[PayResp class]]){
+        if (success) {
+            result = @{@"status": @0};
+        }
+        
+        notification = [NSNotification notificationWithName:WXResTypePay object:nil userInfo:result];
+    }
+    // add card
+    else if ([resp isKindOfClass:[AddCardToWXCardPackageResp class]]) {
+        if (success) {
+            result = @{@"status": @0};
+        }
+        
+        notification = [NSNotification notificationWithName:WXResTypeAddCard object:nil userInfo:result];
+    }
+    
+    [[NSNotificationCenter defaultCenter] postNotification:notification];
+
+}
 
 @end

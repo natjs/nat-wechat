@@ -10,7 +10,12 @@
 #import <WechatOpenSDK/WXApi.h>
 #import <WechatOpenSDK/WXApiObject.h>
 
-@interface NatWechat : NSObject
+#define WXResTypeShare      @"Wechat:Share"
+#define WXResTypePay        @"Wechat:Pay"
+#define WXResTypeAuth       @"Wechat:Auth"
+#define WXResTypeAddCard    @"Wechat:AddCard"
+
+@interface NatWechat : NSObject <WXApiDelegate>
 
 @property (nonatomic, strong) NSString *appId;
 
@@ -18,6 +23,7 @@ typedef void (^NatCallback)(id error, id result);
 
 + (NatWechat *)singletonManger;
 
++ (void)initWXAPI:(NSString *)appId;
 - (void)init:(NSString *)appId :(NatCallback)callback;
 - (void)checkInstalled:(NatCallback)callback;
 - (void)share:(NSDictionary *)options :(NatCallback)callback;
