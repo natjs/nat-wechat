@@ -15,7 +15,8 @@ import com.tencent.mm.opensdk.openapi.IWXAPIEventHandler;
 
 
 /**
- * Created by xu.li(AthenaLightenedMyPath@gmail.com) on 9/1/15.
+ * Created by Acathur on 19/10/2017.
+ * Copyright (c) 2017 Instapp. All rights reserved.
  */
 
 public class EntryActivity extends Activity implements IWXAPIEventHandler {
